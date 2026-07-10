@@ -6,8 +6,18 @@ Ports [hyperresearch](https://github.com/jordan-gibbs/hyperresearch) to a native
 
 ## 安装
 
+### 前置依赖
+
+hyperresearch 的 16 步流水线强依赖 `subagent` 工具（13/17 步 spawn 子代理）。pi-subagents 是独立 npm 包，非 pi 内置，需先装：
+
 ```bash
-pi install /path/to/hyperresearch-pi
+pi install npm:pi-subagents
+```
+
+### 安装
+
+```bash
+pi install npm:hyperresearch-pi
 ```
 
 扩展首次启动时自动安装 `hyperresearch` Python CLI（需 Python 3.11–3.13）。若自动安装失败，手动 `pip install hyperresearch` 或设置 `HYPERRESEARCH_BIN` 指向可执行文件路径。

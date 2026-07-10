@@ -85,6 +85,21 @@ export function registerHooks(
           "info",
         );
       }
+
+      // hyperresearch's 16-step pipeline hard-depends on the `subagent` tool
+      // (13 of 17 skills spawn subagents). pi-subagents is a separate npm
+      // package, not built into pi — warn if it's missing so the user knows
+      // to `pi install npm:pi-subagents` before running /hyperresearch.
+      const allTools = pi.getAllTools();
+      const hasSubagent = allTools.some(
+        (t) => t.name === "subagent" || t.name === "Task",
+      );
+      if (!hasSubagent) {
+        ctx.ui.notify(
+          "hyperresearch needs the subagent tool. Install: pi install npm:pi-subagents",
+          "warning",
+        );
+      }
     }
   });
 

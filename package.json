@@ -1,8 +1,13 @@
 {
   "name": "hyperresearch-pi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deep research harness for pi — tier-adaptive 16-step pipeline with adversarial audit, source provenance, and a persistent searchable vault. Wraps the hyperresearch Python CLI.",
-  "keywords": ["pi-package", "hyperresearch", "deep-research", "research"],
+  "keywords": [
+    "pi-package",
+    "hyperresearch",
+    "deep-research",
+    "research"
+  ],
   "license": "MIT",
   "files": [
     "extensions/",
@@ -13,8 +18,12 @@
     "CONTRIBUTING.md"
   ],
   "pi": {
-    "extensions": ["./extensions"],
-    "skills": ["./skills"]
+    "extensions": [
+      "./extensions"
+    ],
+    "skills": [
+      "./skills"
+    ]
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
