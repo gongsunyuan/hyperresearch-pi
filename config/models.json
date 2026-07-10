@@ -1,0 +1,112 @@
+{
+  "_comment": "hyperresearch-pi 模型分层配置 | 位置: ~/.pi/agent/hyperresearch-models.json | 修改后 /reload 生效",
+  "_format": "模型 ID 格式: provider/model-id (即 pi --list-models 第一列/第二列), 如 zai-glm/glm-5.2, shiyun/claude-opus-4-8",
+  "_priority": "优先级(高→低): 1) subagent 工具的 model 参数(单次) 2) agents.<name> 段(持久覆盖) 3) tiers.<tier> 段(持久默认)",
+  "_fallback": "fallbackModels 是数组: 主模型因无key/限流/502等可重试错误失败时, pi-subagents 自动依次尝试, 全失败则硬报错",
+  "tiers": {
+    "opus": {
+      "_role": "Opus 级 — 强推理角色 (9个): draft-orchestrator, synthesizer, 4 critics, patcher, polish-auditor, readability-recommender",
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    },
+    "sonnet": {
+      "_role": "Sonnet 级 — 阅读理解角色 (5个): fetcher, source-analyst, loci-analyst, depth-investigator, corpus-critic",
+      "model": "shiyun/claude-sonnet-5",
+      "fallbackModels": [
+        "zai-glm/glm-5.2",
+        "zai-glm/glm-5-turbo"
+      ]
+    }
+  },
+  "agents": {
+    "hyperresearch-fetcher": {
+      "_note": "fetcher 并行量大 (8-12个), 用便宜模型控成本",
+      "model": "zai-glm/glm-5.2",
+      "fallbackModels": [
+        "zai-glm/glm-5-turbo"
+      ]
+    },
+    "hyperresearch-source-analyst": {
+      "model": "shiyun/claude-sonnet-5",
+      "fallbackModels": [
+        "zai-glm/glm-5.2"
+      ]
+    },
+    "hyperresearch-loci-analyst": {
+      "model": "shiyun/claude-sonnet-5",
+      "fallbackModels": [
+        "zai-glm/glm-5.2"
+      ]
+    },
+    "hyperresearch-depth-investigator": {
+      "model": "shiyun/claude-sonnet-5",
+      "fallbackModels": [
+        "zai-glm/glm-5.2"
+      ]
+    },
+    "hyperresearch-corpus-critic": {
+      "model": "shiyun/claude-sonnet-5",
+      "fallbackModels": [
+        "zai-glm/glm-5.2"
+      ]
+    },
+    "hyperresearch-draft-orchestrator": {
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    },
+    "hyperresearch-synthesizer": {
+      "_note": "synthesizer 写终报告, 质量最关键, 不回退到弱模型",
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    },
+    "hyperresearch-dialectic-critic": {
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    },
+    "hyperresearch-depth-critic": {
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    },
+    "hyperresearch-width-critic": {
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    },
+    "hyperresearch-instruction-critic": {
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    },
+    "hyperresearch-patcher": {
+      "_note": "patcher 工具锁 read+edit, 需要强判断力",
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    },
+    "hyperresearch-polish-auditor": {
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    },
+    "hyperresearch-readability-recommender": {
+      "model": "shiyun/claude-opus-4-8",
+      "fallbackModels": [
+        "shiyun-gpt/gpt-5.5"
+      ]
+    }
+  }
+}

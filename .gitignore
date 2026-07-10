@@ -1,0 +1,7 @@
+# Runtime / user-local artifacts (not part of the package)
+node_modules/
+.pi/
+.hyperresearch/
+research/
+*.log
+*.tgz
