@@ -418,29 +418,118 @@ export function registerTools(pi: ExtensionAPI): void {
   });
 
   // ── hr_academic ──────────────────────────────────────────────────────
-  // Thin wrapper that runs `hyperresearch research` (the CLI's built-in
-  // academic-API sweep + web search). The skill layer orchestrates this
-  // for the width-sweep step.
+  // Direct academic-API search across Semantic Scholar, arXiv, OpenAlex,
+  // and PubMed. Does NOT depend on the vault's web provider (unlike
+  // `hyperresearch research`, which requires crawl4ai/exa for search).
+  // Returns citation-ranked results; the agent then hr_fetches the
+  // interesting URLs into the vault.
   pi.registerTool({
     name: "hr_academic",
     label: "Academic Search",
     description:
-      "Run an academic-API sweep (Semantic Scholar, arXiv, OpenAlex, PubMed) followed by web search, saving results as linked vault notes (hyperresearch research). Use BEFORE generic web_search for any topic with a research literature.",
-    promptSnippet: "Academic-API literature sweep + web search, saved to vault.",
+      "Search academic APIs (Semantic Scholar, arXiv, OpenAlex, PubMed) for a research query. Returns citation-ranked papers with titles, URLs, and citation counts. Use BEFORE web_search for any topic with a research literature. Does not save to vault — use hr_fetch on the interesting URLs afterward.",
+    promptSnippet: "Search Semantic Scholar / arXiv / OpenAlex / PubMed for citation-ranked papers.",
     promptGuidelines: [
       "Use hr_academic before web_search for research topics — academic APIs return citation-ranked canonical papers, web search returns derivative commentary.",
     ],
     parameters: Type.Object({
       query: Type.String({ description: "Research query" }),
-      tag: Type.Optional(Type.Array(Type.String())),
-      max_results: Type.Optional(Type.Number()),
+      sources: Type.Optional(Type.Array(StringEnum(["semantic-scholar", "arxiv", "openalex", "pubmed"]), { description: "APIs to query (default: all four)" })),
+      max_results: Type.Optional(Type.Number({ description: "Max results per source (default 5)" })),
     }),
-    async execute(_id, params, signal, _onUpdate, ctx) {
-      const args = ["research", params.query];
-      params.tag?.forEach((t) => args.push("--tag", t));
-      if (params.max_results) args.push("--max-results", String(params.max_results));
-      const res = await runHpr(args, { signal, cwd: ctx.cwd, timeoutMs: 300_000 });
-      return fmtResult(res);
+    async execute(_id, params, signal) {
+      const q = encodeURIComponent(params.query);
+      const limit = params.max_results ?? 5;
+      const sources = params.sources ?? ["semantic-scholar", "arxiv", "openalex", "pubmed"];
+
+      const fetchJson = async (url: string): Promise<unknown> => {
+        const r = await fetch(url, { signal, headers: { "User-Agent": "hyperresearch-pi/0.1" } });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      };
+
+      const tasks: Promise<{ source: string; results: unknown[] }>[] = [];
+
+      if (sources.includes("semantic-scholar")) {
+        tasks.push((async () => {
+          try {
+            const d = (await fetchJson(
+              `https://api.semanticscholar.org/graph/v1/paper/search?query=${q}&fields=title,year,citationCount,externalIds,url&limit=${limit}`,
+            )) as { data?: Array<{ title?: string; year?: number; citationCount?: number; externalIds?: { DOI?: string }; url?: string }> };
+            return {
+              source: "semantic-scholar",
+              results: (d.data ?? []).map((p) => ({
+                title: p.title, year: p.year, citations: p.citationCount,
+                url: p.url ?? (p.externalIds?.DOI ? `https://doi.org/${p.externalIds.DOI}` : undefined),
+              })),
+            };
+          } catch (e) { return { source: "semantic-scholar", results: [{ error: (e as Error).message }] }; }
+        })());
+      }
+
+      if (sources.includes("arxiv")) {
+        tasks.push((async () => {
+          try {
+            const xml = await (await fetch(
+              `https://export.arxiv.org/api/query?search_query=all:${q}&sortBy=relevance&max_results=${limit}`,
+              { signal, headers: { "User-Agent": "hyperresearch-pi/0.1" } },
+            )).text();
+            const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) ?? [];
+            return {
+              source: "arxiv",
+              results: entries.map((e) => ({
+                title: e.match(/<title>([\s\S]*?)<\/title>/)?.[1]?.trim(),
+                url: e.match(/<id>([\s\S]*?)<\/id>/)?.[1]?.trim(),
+                summary: e.match(/<summary>([\s\S]*?)<\/summary>/)?.[1]?.trim()?.slice(0, 200),
+              })),
+            };
+          } catch (e) { return { source: "arxiv", results: [{ error: (e as Error).message }] }; }
+        })());
+      }
+
+      if (sources.includes("openalex")) {
+        tasks.push((async () => {
+          try {
+            const d = (await fetchJson(
+              `https://api.openalex.org/works?search=${q}&sort=cited_by_count:desc&per-page=${limit}&mailto=research@example.com`,
+            )) as { results?: Array<{ title?: string; publication_year?: number; cited_by_count?: number; doi?: string; id?: string }> };
+            return {
+              source: "openalex",
+              results: (d.results ?? []).map((w) => ({
+                title: w.title, year: w.publication_year, citations: w.cited_by_count,
+                url: w.doi ? `https://doi.org/${w.doi}` : w.id,
+              })),
+            };
+          } catch (e) { return { source: "openalex", results: [{ error: (e as Error).message }] }; }
+        })());
+      }
+
+      if (sources.includes("pubmed")) {
+        tasks.push((async () => {
+          try {
+            const es = (await fetchJson(
+              `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${q}&retmode=json&retmax=${limit}`,
+            )) as { esearchresult?: { idlist?: string[] } };
+            const ids = es.esearchresult?.idlist ?? [];
+            return {
+              source: "pubmed",
+              results: ids.map((id) => ({ pmid: id, url: `https://pubmed.ncbi.nlm.nih.gov/${id}/` })),
+            };
+          } catch (e) { return { source: "pubmed", results: [{ error: (e as Error).message }] }; }
+        })());
+      }
+
+      const settled = await Promise.all(tasks);
+      const text = JSON.stringify({ query: params.query, sources: settled }, null, 2);
+      const trunc = truncateHead(text, { maxLines: DEFAULT_MAX_LINES, maxBytes: DEFAULT_MAX_BYTES });
+      let out = trunc.content;
+      if (trunc.truncated) {
+        out += `\n\n[Output truncated: ${trunc.outputLines} of ${trunc.totalLines} lines]`;
+      }
+      return {
+        content: [{ type: "text" as const, text: out }],
+        details: { query: params.query, sources: settled, truncated: trunc.truncated },
+      };
     },
   });
 
