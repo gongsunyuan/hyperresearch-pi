@@ -442,6 +442,16 @@ export function registerTools(pi: ExtensionAPI): void {
       const limit = params.max_results ?? 5;
       const sources = params.sources ?? ["semantic-scholar", "arxiv", "openalex", "pubmed"];
 
+      // Random delay helper — stagger API calls to simulate human pacing
+      // and avoid rate-limiting (e.g. Semantic Scholar 429s on parallel fire).
+      const rand = (min: number, max: number) =>
+        min + Math.random() * (max - min);
+      const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+      const delayThen = async <T>(ms: number, fn: () => Promise<T>): Promise<T> => {
+        await sleep(ms);
+        return fn();
+      };
+
       const fetchJson = async (url: string): Promise<unknown> => {
         const r = await fetch(url, { signal, headers: { "User-Agent": "hyperresearch-pi/0.1" } });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -451,7 +461,7 @@ export function registerTools(pi: ExtensionAPI): void {
       const tasks: Promise<{ source: string; results: unknown[] }>[] = [];
 
       if (sources.includes("semantic-scholar")) {
-        tasks.push((async () => {
+        tasks.push(delayThen(rand(200, 800), async () => {
           try {
             const d = (await fetchJson(
               `https://api.semanticscholar.org/graph/v1/paper/search?query=${q}&fields=title,year,citationCount,externalIds,url&limit=${limit}`,
@@ -464,11 +474,11 @@ export function registerTools(pi: ExtensionAPI): void {
               })),
             };
           } catch (e) { return { source: "semantic-scholar", results: [{ error: (e as Error).message }] }; }
-        })());
+        }));
       }
 
       if (sources.includes("arxiv")) {
-        tasks.push((async () => {
+        tasks.push(delayThen(rand(500, 1500), async () => {
           try {
             const xml = await (await fetch(
               `https://export.arxiv.org/api/query?search_query=all:${q}&sortBy=relevance&max_results=${limit}`,
@@ -484,11 +494,11 @@ export function registerTools(pi: ExtensionAPI): void {
               })),
             };
           } catch (e) { return { source: "arxiv", results: [{ error: (e as Error).message }] }; }
-        })());
+        }));
       }
 
       if (sources.includes("openalex")) {
-        tasks.push((async () => {
+        tasks.push(delayThen(rand(1000, 2500), async () => {
           try {
             const d = (await fetchJson(
               `https://api.openalex.org/works?search=${q}&sort=cited_by_count:desc&per-page=${limit}&mailto=research@example.com`,
@@ -501,11 +511,11 @@ export function registerTools(pi: ExtensionAPI): void {
               })),
             };
           } catch (e) { return { source: "openalex", results: [{ error: (e as Error).message }] }; }
-        })());
+        }));
       }
 
       if (sources.includes("pubmed")) {
-        tasks.push((async () => {
+        tasks.push(delayThen(rand(1500, 3500), async () => {
           try {
             const es = (await fetchJson(
               `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${q}&retmode=json&retmax=${limit}`,
@@ -516,7 +526,7 @@ export function registerTools(pi: ExtensionAPI): void {
               results: ids.map((id) => ({ pmid: id, url: `https://pubmed.ncbi.nlm.nih.gov/${id}/` })),
             };
           } catch (e) { return { source: "pubmed", results: [{ error: (e as Error).message }] }; }
-        })());
+        }));
       }
 
       const settled = await Promise.all(tasks);
