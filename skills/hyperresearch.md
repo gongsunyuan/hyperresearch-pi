@@ -41,7 +41,7 @@ description: >
    | `hyperresearch init` | `hr_init` |
    | `hyperresearch link auto` | `hr_link` |
    | `hyperresearch dedup` | `hr_dedup` |
-   | `hyperresearch research` (学术 API) | `hr_academic` |
+   | 学术 API 搜索 (Semantic Scholar/arXiv/OpenAlex/PubMed) | `hr_academic` (直接调 API, 不依赖 web provider) |
    
    当步骤 skill 里出现 `hyperresearch <cmd> ... -j` 的 bash 调用时，改用对应 hr_* 工具。
 
