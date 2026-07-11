@@ -1,111 +1,101 @@
 {
-  "_comment": "hyperresearch-pi 模型分层配置 | 位置: ~/.pi/agent/hyperresearch-models.json | 修改后 /reload 生效",
-  "_format": "模型 ID 格式: provider/model-id (即 pi --list-models 第一列/第二列), 如 zai-glm/glm-5.2, shiyun/claude-opus-4-8",
-  "_priority": "优先级(高→低): 1) subagent 工具的 model 参数(单次) 2) agents.<name> 段(持久覆盖) 3) tiers.<tier> 段(持久默认)",
-  "_fallback": "fallbackModels 是数组: 主模型因无key/限流/502等可重试错误失败时, pi-subagents 自动依次尝试, 全失败则硬报错",
+  "_comment": "hyperresearch-pi model tier config | location: ~/.pi/agent/hyperresearch-models.json | reload after edit",
+  "_format": "Model ID format: provider/model-id (first/second column of `pi --list-models`). Replace the placeholder values below with real IDs from your environment.",
+  "_priority": "Priority (high -> low): 1) subagent tool 'model' param (per-spawn, temporary) 2) agents.<name> (persistent, per-agent override) 3) tiers.<tier> (persistent, tier default)",
+  "_fallback": "fallbackModels is an array. When the primary model fails on a retryable error (no API key, rate limit, 502/503, timeout), pi-subagents auto-tries each fallback in order. If the whole chain is unavailable, the spawn hard-fails.",
+
   "tiers": {
     "opus": {
-      "_role": "Opus 级 — 强推理角色 (9个): draft-orchestrator, synthesizer, 4 critics, patcher, polish-auditor, readability-recommender",
-      "model": "shiyun/claude-opus-4-8",
+      "_role": "Opus-tier — strong-reasoning roles (9 agents): draft-orchestrator, synthesizer, 4 critics, patcher, polish-auditor, readability-recommender",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     },
     "sonnet": {
-      "_role": "Sonnet 级 — 阅读理解角色 (5个): fetcher, source-analyst, loci-analyst, depth-investigator, corpus-critic",
-      "model": "shiyun/claude-sonnet-5",
-      "fallbackModels": [
-        "zai-glm/glm-5.2",
-        "zai-glm/glm-5-turbo"
-      ]
+      "_role": "Sonnet-tier — reading-comprehension roles (5 agents): fetcher, source-analyst, loci-analyst, depth-investigator, corpus-critic",
+      "model": "sonnet",
+      "fallbackModels": []
     }
   },
+
   "agents": {
     "hyperresearch-fetcher": {
-      "_note": "fetcher 并行量大 (8-12个), 用便宜模型控成本",
-      "model": "zai-glm/glm-5.2",
-      "fallbackModels": [
-        "zai-glm/glm-5-turbo"
-      ]
+      "_note": "fetcher runs in high parallelism (8-12), use a cheap model to control cost",
+      "model": "sonnet",
+      "fallbackModels": []
     },
     "hyperresearch-source-analyst": {
-      "model": "shiyun/claude-sonnet-5",
-      "fallbackModels": [
-        "zai-glm/glm-5.2"
-      ]
+      "model": "sonnet",
+      "fallbackModels": []
     },
     "hyperresearch-loci-analyst": {
-      "model": "shiyun/claude-sonnet-5",
-      "fallbackModels": [
-        "zai-glm/glm-5.2"
-      ]
+      "model": "sonnet",
+      "fallbackModels": []
     },
     "hyperresearch-depth-investigator": {
-      "model": "shiyun/claude-sonnet-5",
-      "fallbackModels": [
-        "zai-glm/glm-5.2"
-      ]
+      "model": "sonnet",
+      "fallbackModels": []
     },
     "hyperresearch-corpus-critic": {
-      "model": "shiyun/claude-sonnet-5",
-      "fallbackModels": [
-        "zai-glm/glm-5.2"
-      ]
+      "model": "sonnet",
+      "fallbackModels": []
     },
+
     "hyperresearch-draft-orchestrator": {
-      "model": "shiyun/claude-opus-4-8",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     },
     "hyperresearch-synthesizer": {
-      "_note": "synthesizer 写终报告, 质量最关键, 不回退到弱模型",
-      "model": "shiyun/claude-opus-4-8",
+      "_note": "synthesizer writes the final report, quality is critical, do not fall back to weaker models",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     },
     "hyperresearch-dialectic-critic": {
-      "model": "shiyun/claude-opus-4-8",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     },
     "hyperresearch-depth-critic": {
-      "model": "shiyun/claude-opus-4-8",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     },
     "hyperresearch-width-critic": {
-      "model": "shiyun/claude-opus-4-8",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     },
     "hyperresearch-instruction-critic": {
-      "model": "shiyun/claude-opus-4-8",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     },
     "hyperresearch-patcher": {
-      "_note": "patcher 工具锁 read+edit, 需要强判断力",
-      "model": "shiyun/claude-opus-4-8",
+      "_note": "patcher is tool-locked to read+edit, needs strong judgment",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     },
     "hyperresearch-polish-auditor": {
-      "model": "shiyun/claude-opus-4-8",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     },
     "hyperresearch-readability-recommender": {
-      "model": "shiyun/claude-opus-4-8",
+      "model": "opus",
       "fallbackModels": [
-        "shiyun-gpt/gpt-5.5"
+        "sonnet"
       ]
     }
   }

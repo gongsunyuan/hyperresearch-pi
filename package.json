@@ -1,6 +1,6 @@
 {
   "name": "hyperresearch-pi",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Deep research harness for pi — tier-adaptive 16-step pipeline with adversarial audit, source provenance, and a persistent searchable vault. Wraps the hyperresearch Python CLI.",
   "keywords": [
     "pi-package",
